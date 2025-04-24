@@ -1,0 +1,19 @@
+<button id="payNow" style="display: flex; align-items: center; padding: 10px 20px; background-color: #00AEEF; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+    <img src="https://www.mpay.co.th/images/mpay_logo.png" alt="mPay" style="height: 24px; margin-right: 10px;">
+    Pay with mPAY
+</button>
+
+<script>
+document.getElementById('payNow').onclick = function () {
+    fetch("https://onepay-api.onrender.com/pay")
+        .then(res => res.json())
+        .then(data => {
+            if (data.form_url) {
+                window.location.href = data.form_url;
+            } else {
+                alert("Payment error: " + JSON.stringify(data));
+            }
+        })
+        .catch(err => alert("Failed to start payment: " + err));
+};
+</script>
