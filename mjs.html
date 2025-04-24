@@ -1,0 +1,106 @@
+<!-- GoOrca QR Payment Integration -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GoOrca QR Payment</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css">
+  <style>
+    #qrModal {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      width: 300px;
+      text-align: center;
+    }
+    #qrImage {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body class="container">
+
+  <!-- Payment Trigger Button -->
+  <button id="payNow" class="btn btn-success">Pay with QR</button>
+
+  <!-- Modal -->
+  <div id="qrModal">
+    <div class="modal-content">
+      <h4>Scan to Pay</h4>
+      <img id="qrImage" src="" alt="QR Code" />
+      <p id="statusText">Waiting for payment...</p>
+      <button onclick="closeModal()" class="btn btn-default">Close</button>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    let pollingInterval;
+    let currentTxnId = null;
+
+    function showModal() {
+      document.getElementById("qrModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      clearInterval(pollingInterval);
+      document.getElementById("qrModal").style.display = "none";
+      document.getElementById("statusText").innerText = "Waiting for payment...";
+      document.getElementById("payNow").disabled = false;
+    }
+
+    document.getElementById("payNow").onclick = function () {
+      const payBtn = document.getElementById("payNow");
+      payBtn.disabled = true;
+
+      fetch("https://mpayflaskapi.onrender.com/")  // Update with actual Flask URL
+        .then(res => res.json())
+        .then(data => {
+          if (data.qr_image_url && data.txn_id) {
+            currentTxnId = data.txn_id;
+            document.getElementById("qrImage").src = data.qr_image_url;
+            showModal();
+
+            pollingInterval = setInterval(checkStatus, 5000);
+          } else {
+            alert("Payment initiation failed.");
+            payBtn.disabled = false;
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Error calling payment API");
+          payBtn.disabled = false;
+        });
+    };
+
+    function checkStatus() {
+      if (!currentTxnId) return;
+
+      fetch(`https://your-flask-api.onrender.com/status?txn_id=${currentTxnId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            document.getElementById("statusText").innerText = "✅ Payment Successful!";
+            clearInterval(pollingInterval);
+            setTimeout(closeModal, 2000);
+          } else if (data.status === 'cancelled' || data.status === 'failed') {
+            document.getElementById("statusText").innerText = "❌ Payment Failed or Cancelled.";
+            clearInterval(pollingInterval);
+            setTimeout(closeModal, 2000);
+          }
+        })
+        .catch(err => console.error("Polling error:", err));
+    }
+  </script>
+
+</body>
+</html>
